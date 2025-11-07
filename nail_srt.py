@@ -139,49 +139,67 @@ if st.button("✅ 기록 저장", use_container_width=True):
         st.rerun()
 
 # ---------- 전체 명단 ----------
-st.header("📋 전체 명단")
+st.header("📋 전체 명단 (클릭 시 수정창 자동 반영)")
+
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    # 데이터 에디터에서 클릭 감지용 선택 컬럼
+    edited = st.data_editor(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        key="main_table",
+        on_change=lambda: st.session_state.update({
+            "selected_id": st.session_state["main_table"]["edited_rows"]
+        })
+    )
+
+    # ✅ 선택된 행 감지
+    if "selected_row" not in st.session_state:
+        st.session_state["selected_row"] = None
+
+    if st.session_state["main_table"]["edited_rows"]:
+        idx = list(st.session_state["main_table"]["edited_rows"].keys())[0]
+        st.session_state["selected_row"] = edited.iloc[idx].to_dict()
+
 else:
     st.info("등록된 데이터가 없습니다.")
+    st.session_state["selected_row"] = None
 
-# ---------- 수정 및 삭제 ----------
+# ---------- 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
-if len(df) > 0:
-    selected_id = st.selectbox("사번 선택", df["사번"].tolist(), key="selected_emp")
-    record = next((r for r in st.session_state["records"] if r["사번"] == selected_id), None)
+record = st.session_state.get("selected_row")
+if record:
+    st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
+    name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
+    care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
+    month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
+    flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
 
-    if record:
-        name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
-        care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
-        month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
-        flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("💾 수정", use_container_width=True):
-                for r in st.session_state["records"]:
-                    if r["사번"] == selected_id:
-                        r.update({
-                            "이름": name_edit,
-                            "케어일자": care_edit.strftime("%Y-%m-%d"),
-                            "한달시점": month_edit.strftime("%Y-%m-%d"),
-                            "한달지남": flag_edit,
-                        })
-                save_json(FILE_PATH, st.session_state["records"])
-                render_upload(FILE_NAME, st.session_state["records"])
-                st.toast("수정 완료", icon="✅")
-                st.rerun()
-        with col2:
-            if st.button("🗑️ 삭제", use_container_width=True):
-                st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != selected_id]
-                save_json(FILE_PATH, st.session_state["records"])
-                render_upload(FILE_NAME, st.session_state["records"])
-                st.toast("삭제 완료", icon="🗑️")
-                st.rerun()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 수정", use_container_width=True):
+            for r in st.session_state["records"]:
+                if r["사번"] == record["사번"]:
+                    r.update({
+                        "이름": name_edit,
+                        "케어일자": care_edit.strftime("%Y-%m-%d"),
+                        "한달시점": month_edit.strftime("%Y-%m-%d"),
+                        "한달지남": flag_edit,
+                    })
+            save_json(FILE_PATH, st.session_state["records"])
+            render_upload(FILE_NAME, st.session_state["records"])
+            st.toast("수정 완료", icon="✅")
+            st.rerun()
+    with col2:
+        if st.button("🗑️ 삭제", use_container_width=True):
+            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
+            save_json(FILE_PATH, st.session_state["records"])
+            render_upload(FILE_NAME, st.session_state["records"])
+            st.toast("삭제 완료", icon="🗑️")
+            st.rerun()
 else:
-    st.info("등록된 데이터가 없습니다.")
+    st.info("표에서 수정할 행을 클릭하세요.")
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
