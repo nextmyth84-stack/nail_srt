@@ -5,12 +5,12 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import os, streamlit as st
 
-file_path = "data/케어관리.json"
-if os.path.exists(file_path):
-    os.remove(file_path)
-    st.success("✅ 로컬 케어관리.json 삭제 완료")
-else:
-    st.info("ℹ️ 이미 파일이 삭제되어 있습니다.")
+#file_path = "data/케어관리.json"
+#if os.path.exists(file_path):
+#    os.remove(file_path)
+#    st.success("✅ 로컬 케어관리.json 삭제 완료")
+#else:
+#    st.info("ℹ️ 이미 파일이 삭제되어 있습니다.")
 
 
 
