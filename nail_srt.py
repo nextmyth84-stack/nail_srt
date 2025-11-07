@@ -153,7 +153,7 @@ if st.button("✅ 기록 저장", use_container_width=True):
     if not name or not emp_id:
         st.warning("이름과 사번을 모두 입력하세요.")
     else:
-         = datetime.now(ZoneInfo("Asia/Seoul")).date()
+        today = datetime.now(ZoneInfo("Asia/Seoul")).date()
         one_month =  + relativedelta(months=1)
         updated = False
         for r in st.session_state["records"]:
