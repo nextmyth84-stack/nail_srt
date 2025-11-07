@@ -13,7 +13,6 @@ FILE_NAME = "케어관리.json"
 FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
 
 def render_upload(filename, data):
-    """Render 서버 업로드 (JSON 전송 방식)"""
     try:
         res = requests.post(
             f"{RENDER_BASE}/upload",
@@ -22,11 +21,10 @@ def render_upload(filename, data):
         )
         return res.ok
     except Exception as e:
-        st.warning(f"Render 업로드 실패: {e}")
+        st.toast(f"Render 업로드 실패: {e}", icon="⚠️")
         return False
 
 def render_download(filename, save_as=None):
-    """Render 서버에서 JSON 복원"""
     try:
         res = requests.get(f"{RENDER_BASE}/download/{filename}", timeout=10)
         if res.ok:
@@ -37,7 +35,7 @@ def render_download(filename, save_as=None):
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return True
     except Exception as e:
-        st.warning(f"Render 복원 실패: {e}")
+        st.toast(f"Render 복원 실패: {e}", icon="⚠️")
     return False
 
 def load_json(path, default):
@@ -53,18 +51,17 @@ def save_json(path, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 # =====================================
-# 🗂 데이터 복원
+# 데이터 복원
 # =====================================
 if not os.path.exists(FILE_PATH):
     ok = render_download(FILE_NAME)
-    msg = "Render 복원 완료" if ok else "Render 복원 실패"
+    msg = "☁️ Render 복원 완료" if ok else "⚠️ Render 복원 실패"
 else:
     ok, msg = True, "로컬 데이터 사용 중"
 
 records_cache = load_json(FILE_PATH, [])
 for r in records_cache:
-    if "사번" not in r:
-        r["사번"] = ""
+    r.setdefault("사번", "")
 st.session_state.setdefault("records", records_cache)
 
 # =====================================
@@ -79,140 +76,176 @@ for r in st.session_state["records"]:
         pass
 
 # =====================================
-# UI 시작
+# 페이지 설정
 # =====================================
-st.set_page_config(page_title="케어 예약 관리", layout="centered")
+st.set_page_config(page_title="케어관리", layout="centered")
+
+# ==== 자동 다크모드 감지 ====
+st.markdown("""
+<style>
+/* 💡 라이트모드 기본 */
+:root {
+  --bg: #ffffff;
+  --text: #111827;
+  --input-bg: #f8fafc;
+  --input-border: #d1d5db;
+  --button-bg: #e5e7eb;
+  --button-text: #111827;
+  --table-bg: #ffffff;
+}
+
+/* 🌙 다크모드 자동 감지 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --text: #e5e7eb;
+    --input-bg: #111827;
+    --input-border: #334155;
+    --button-bg: #1f2937;
+    --button-text: #f1f5f9;
+    --table-bg: #0f172a;
+  }
+}
+
+/* 공통 UI */
+html, body, [data-testid="stAppViewContainer"] {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+
+input, textarea, select {
+  background-color: var(--input-bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 8px !important;
+}
+
+button[kind="primary"], .stButton>button {
+  background: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 10px !important;
+}
+
+[data-testid="stDataFrame"] .stDataFrame {
+  background-color: var(--table-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--input-border) !important;
+}
+
+label, .stMarkdown, .stTextInput, .stSelectbox, .stDateInput, .stButton {
+  color: var(--text) !important;
+}
+hr, .stDivider { border-color: var(--input-border) !important; }
+
+/* 모바일 UI 크기 조정 */
+.stTextInput, .stSelectbox, .stDateInput, .stButton { margin-bottom: 12px !important; }
+button, input, select, textarea { font-size: 17px !important; }
+</style>
+""", unsafe_allow_html=True)
+# ==== /자동 다크모드 ====
+
+# =====================================
+# 본문 UI
+# =====================================
 st.title("💆‍♀️ 케어 예약 관리")
 
-st.subheader("🧾 케어 기록 추가")
-col1, col2 = st.columns(2)
-with col1:
-    name = st.text_input("이름 입력:")
-with col2:
-    emp_id = st.text_input("사번 입력:")
+# ---------- 기록 추가 ----------
+st.header("🧾 기록 추가 및 수정")
+name = st.text_input("이름 입력")
+emp_id = st.text_input("사번 입력")
 
-# ✅ 기존 기록 요약
-if emp_id.strip():
-    existing = next((r for r in st.session_state["records"] if r.get("사번") == emp_id.strip()), None)
-    if existing:
-        st.markdown(
-            f"<p style='font-size:13px; color:#64748b;'>"
-            f"📌 {existing['이름']}님의 마지막 케어일: <b>{existing['케어일자']}</b> / "
-            f"한달시점: <b>{existing['한달시점']}</b></p>",
-            unsafe_allow_html=True,
-        )
+existing = next((r for r in st.session_state["records"] if r["사번"] == emp_id.strip()), None)
+if existing:
+    st.info(f"📌 최근 케어: {existing['케어일자']} / 다음: {existing['한달시점']}")
 
-if st.button("기록 추가") and name.strip() and emp_id.strip():
-    today = datetime.now().date()
-    one_month = today + relativedelta(months=1)
-    updated = False
-
-    for r in st.session_state["records"]:
-        if r["사번"] == emp_id.strip():
-            r["이름"] = name.strip()
-            r["케어일자"] = today.strftime("%Y-%m-%d")
-            r["한달시점"] = one_month.strftime("%Y-%m-%d")
-            r["한달지남"] = "O" if today >= one_month else "X"
-            updated = True
-            break
-
-    if not updated:
-        st.session_state["records"].append({
-            "이름": name.strip(),
-            "사번": emp_id.strip(),
-            "케어일자": today.strftime("%Y-%m-%d"),
-            "한달시점": one_month.strftime("%Y-%m-%d"),
-            "한달지남": "O" if today >= one_month else "X",
-        })
-        st.success(f"✅ {name} ({emp_id}) 님의 새 케어 기록이 추가되었습니다.")
+if st.button("✅ 기록 저장", use_container_width=True):
+    if not name or not emp_id:
+        st.warning("이름과 사번을 모두 입력하세요.")
     else:
-        st.warning(f"♻️ {name} ({emp_id}) 님의 케어 기록이 갱신되었습니다.")
+        today = datetime.now().date()
+        one_month = today + relativedelta(months=1)
+        updated = False
+        for r in st.session_state["records"]:
+            if r["사번"] == emp_id.strip():
+                r.update({
+                    "이름": name.strip(),
+                    "케어일자": today.strftime("%Y-%m-%d"),
+                    "한달시점": one_month.strftime("%Y-%m-%d"),
+                    "한달지남": "O" if today >= one_month else "X",
+                })
+                updated = True
+                break
+        if not updated:
+            st.session_state["records"].append({
+                "이름": name.strip(),
+                "사번": emp_id.strip(),
+                "케어일자": today.strftime("%Y-%m-%d"),
+                "한달시점": one_month.strftime("%Y-%m-%d"),
+                "한달지남": "O" if today >= one_month else "X",
+            })
+        save_json(FILE_PATH, st.session_state["records"])
+        render_upload(FILE_NAME, st.session_state["records"])
+        st.toast("저장 완료 및 Render 반영", icon="✅")
 
-    save_json(FILE_PATH, st.session_state["records"])
-    ok = render_upload(FILE_NAME, st.session_state["records"])
-    msg = "Render 업로드 완료" if ok else "Render 업로드 실패"
+# ---------- 전체 명단 ----------
+st.header("📋 전체 명단")
+df = pd.DataFrame(st.session_state["records"])
+if len(df) > 0:
+    st.dataframe(df, use_container_width=True, hide_index=True)
+else:
+    st.info("등록된 데이터가 없습니다.")
 
-# =====================================
-# 표 표시 + 수정/삭제
-# =====================================
-if st.session_state["records"]:
-    st.divider()
-    st.subheader("📋 전체 케어 명단")
-    df = pd.DataFrame(st.session_state["records"])
-    st.dataframe(df, use_container_width=True)
+# ---------- 수정 및 삭제 ----------
+st.header("✏️ 수정 또는 삭제")
+if len(df) > 0:
+    selected = st.selectbox("사번 선택", df["사번"].tolist())
+    record = next((r for r in st.session_state["records"] if r["사번"] == selected), None)
+    if record:
+        name_edit = st.text_input("이름 수정", record["이름"])
+        care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date())
+        month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date())
+        flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1)
 
-    # ===========================
-    # ✏️ 수정 / 삭제 기능
-    # ===========================
-    st.divider()
-    st.subheader("⚙️ 수정 및 삭제")
-
-    target_id = st.selectbox("수정/삭제할 사번 선택:", [r["사번"] for r in st.session_state["records"]])
-    target = next((r for r in st.session_state["records"] if r["사번"] == target_id), None)
-
-    if target:
         col1, col2 = st.columns(2)
         with col1:
-            new_name = st.text_input("이름 수정:", value=target["이름"])
-            new_care = st.date_input("케어일 수정:", datetime.strptime(target["케어일자"], "%Y-%m-%d").date())
+            if st.button("💾 수정", use_container_width=True):
+                record.update({
+                    "이름": name_edit,
+                    "케어일자": care_edit.strftime("%Y-%m-%d"),
+                    "한달시점": month_edit.strftime("%Y-%m-%d"),
+                    "한달지남": flag_edit,
+                })
+                save_json(FILE_PATH, st.session_state["records"])
+                render_upload(FILE_NAME, st.session_state["records"])
+                st.toast("수정 완료", icon="✅")
         with col2:
-            new_month = st.date_input("한달시점 수정:", datetime.strptime(target["한달시점"], "%Y-%m-%d").date())
-            new_flag = st.selectbox("한달지남:", ["O", "X"], index=0 if target["한달지남"] == "O" else 1)
-
-        btn1, btn2 = st.columns(2)
-        with btn1:
-            if st.button("💾 수정 저장"):
-                target["이름"] = new_name
-                target["케어일자"] = new_care.strftime("%Y-%m-%d")
-                target["한달시점"] = new_month.strftime("%Y-%m-%d")
-                target["한달지남"] = new_flag
+            if st.button("🗑️ 삭제", use_container_width=True):
+                st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != selected]
                 save_json(FILE_PATH, st.session_state["records"])
-                ok = render_upload(FILE_NAME, st.session_state["records"])
-                st.success("✅ 수정 완료 및 Render 반영")
-        with btn2:
-            if st.button("🗑️ 삭제"):
-                st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != target_id]
-                save_json(FILE_PATH, st.session_state["records"])
-                ok = render_upload(FILE_NAME, st.session_state["records"])
-                st.warning("🗑️ 해당 기록 삭제 및 Render 반영 완료")
+                render_upload(FILE_NAME, st.session_state["records"])
+                st.toast("삭제 완료", icon="🗑️")
 
-    # ===========================
-    # 🔍 검색 및 필터
-    # ===========================
-    st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("🔍 검색")
-        keyword = st.text_input("이름 또는 사번으로 검색:")
-    with col2:
-        st.write("")
-        show_expired = st.button("⏰ 한달 지난 사람만 보기")
+# ---------- 검색 및 필터 ----------
+st.header("🔍 검색 / 필터")
+col1, col2 = st.columns(2)
+with col1:
+    keyword = st.text_input("이름/사번 검색")
+with col2:
+    show_expired = st.toggle("⏰ 한달 지난 사람만 보기")
 
+if len(df) > 0:
+    filtered = df.copy()
     if keyword.strip():
-        filtered = df[df.apply(lambda x: keyword.strip().lower() in x["이름"].lower() or keyword.strip() in x["사번"], axis=1)]
-        if not filtered.empty:
-            st.dataframe(filtered, use_container_width=True)
-        else:
-            st.warning("검색 결과가 없습니다.")
-    elif show_expired:
-        filtered = df[df["한달지남"] == "O"]
-        if not filtered.empty:
-            st.dataframe(filtered, use_container_width=True)
-        else:
-            st.info("한달이 지난 사람이 없습니다.")
-else:
-    st.info("아직 기록이 없습니다. 이름과 사번을 입력하고 [기록 추가] 버튼을 눌러보세요.")
+        filtered = filtered[filtered.apply(lambda x: keyword.lower() in x["이름"].lower() or keyword in x["사번"], axis=1)]
+    if show_expired:
+        filtered = filtered[filtered["한달지남"] == "O"]
+    st.dataframe(filtered, use_container_width=True, hide_index=True)
 
-# =====================================
-# 다운로드 & 하단 상태표시
-# =====================================
-if st.session_state["records"]:
-    df = pd.DataFrame(st.session_state["records"])
-    csv = df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button("📥 엑셀 다운로드", csv, "케어관리_현황.csv", "text/csv")
-
+# ---------- 하단 상태 ----------
 st.markdown(
-    f"<p style='text-align:center; font-size:13px; color:#94a3b8; margin-top:20px;'>"
+    f"<p style='text-align:center;font-size:13px;color:#94a3b8;margin-top:12px;'>"
     f"{'✅' if ok else '⚠️'} {msg}</p>",
     unsafe_allow_html=True
 )
