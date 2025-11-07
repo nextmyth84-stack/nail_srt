@@ -139,36 +139,38 @@ if st.button("✅ 기록 저장", use_container_width=True):
         st.rerun()
 
 # ---------- 전체 명단 ----------
-st.header("📋 전체 명단 (클릭 시 수정창 자동 반영)")
+st.header("📋 전체 명단 (선택 시 수정창 자동 반영)")
 
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    # 데이터 에디터에서 클릭 감지용 선택 컬럼
-    edited = st.data_editor(
+    # 선택 컬럼 추가
+    df["선택"] = False
+
+    # 테이블 표시
+    selected_df = st.data_editor(
         df,
         use_container_width=True,
         hide_index=True,
-        key="main_table",
-        on_change=lambda: st.session_state.update({
-            "selected_id": st.session_state["main_table"]["edited_rows"]
-        })
+        key="table",
+        column_config={
+            "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
+        },
     )
 
-    # ✅ 선택된 행 감지
-    if "selected_row" not in st.session_state:
-        st.session_state["selected_row"] = None
-
-    if st.session_state["main_table"]["edited_rows"]:
-        idx = list(st.session_state["main_table"]["edited_rows"].keys())[0]
-        st.session_state["selected_row"] = edited.iloc[idx].to_dict()
-
+    # ✅ 체크된 행 자동 반영
+    selected_rows = selected_df[selected_df["선택"] == True]
+    record = None
+    if not selected_rows.empty:
+        record = selected_rows.iloc[0].to_dict()
+    else:
+        record = None
 else:
     st.info("등록된 데이터가 없습니다.")
-    st.session_state["selected_row"] = None
+    record = None
 
 # ---------- 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
-record = st.session_state.get("selected_row")
+
 if record:
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
     name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
@@ -193,13 +195,16 @@ if record:
             st.rerun()
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
-            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
+            st.session_state["records"] = [
+                r for r in st.session_state["records"] if r["사번"] != record["사번"]
+            ]
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
             st.rerun()
 else:
-    st.info("표에서 수정할 행을 클릭하세요.")
+    st.info("수정할 항목을 선택하세요.")
+
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
