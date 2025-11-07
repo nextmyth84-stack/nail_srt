@@ -111,7 +111,7 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stHeader"] { background: transparent !important; }
 
 /* ✅ 상단 여백(모바일 밸런스) */
-section.main, .block-container { padding-top: 1.4rem !important; }
+section.main, .block-container { padding-top: 2.0rem !important; }
 
 /* 폰트 크기 (모바일 최적) */
 h1 {font-size: 28px !important; text-align:center;}
