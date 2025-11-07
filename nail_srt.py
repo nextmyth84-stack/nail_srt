@@ -1,5 +1,6 @@
-# nail_srt.py — 케어 예약 관리 (한국시간 + 자동 다크모드 + Render연동 + 직관적 수정/삭제)
-
+# =====================================
+# 💆‍♀️ 케어 예약 관리 v2.1
+# =====================================
 import streamlit as st
 import pandas as pd
 import json, os, requests
@@ -77,19 +78,69 @@ for r in st.session_state["records"]:
         pass
 
 # =====================================
-# UI 스타일 (자동 다크모드 + 글자크기 균형)
+# 💅 UI 스타일
 # =====================================
 st.set_page_config(page_title="케어관리", layout="centered")
 st.markdown("""
 <style>
 section.main, .block-container { padding-top: 2.0rem !important; }
+
 h1 {font-size: 28px !important; text-align:center;}
-h2,h3 {font-size:20px !important;}
-label, div, span {font-size:18px !important;}
+h2, h3 {font-size: 20px !important; text-align:center;}
+label, div, span {font-size: 18px !important;}
+
+input, textarea, select {
+  font-size: 18px !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  background-color: #f8fafc !important;
+  color: #111827 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+button, .stButton>button {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  padding: 12px 0px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  border: none !important;
+  transition: all 0.15s ease-in-out;
+}
+button:hover, .stButton>button:hover {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+  transform: scale(1.02);
+}
+
+[data-testid="stDataFrame"] .stDataFrame {
+  font-size: 18px !important;
+  border-radius: 8px !important;
+}
+
 @media (prefers-color-scheme: dark) {
-  html, body { background-color:#0b1220 !important; color:#e5e7eb !important; }
-  input,textarea,select {background:#111827!important;color:#e5e7eb!important;border:1px solid #334155!important;}
-  button,.stButton>button {background:#1f2937!important;color:#e5e7eb!important;border:1px solid #334155!important;}
+  html, body {
+    background-color: #0b1220 !important;
+    color: #e5e7eb !important;
+  }
+  input, textarea, select {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+    border: 1px solid #334155 !important;
+  }
+  button, .stButton>button {
+    background: linear-gradient(180deg, #1e3a8a, #1e40af) !important;
+    color: #e0e7ff !important;
+    border: none !important;
+  }
+  button:hover, .stButton>button:hover {
+    background: linear-gradient(180deg, #1e40af, #1e3a8a) !important;
+    transform: scale(1.02);
+  }
+  [data-testid="stDataFrame"] .stDataFrame {
+    background-color: #0f172a !important;
+    color: #e5e7eb !important;
+  }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -99,8 +150,8 @@ label, div, span {font-size:18px !important;}
 # =====================================
 st.title("💆‍♀️ 케어 예약 관리")
 
-# ---------- 기록 추가 ----------
-st.header("🧾 기록 추가 및 수정")
+# ---------- 1️⃣ 기록 추가 ----------
+st.header("🧾 기록 추가")
 name = st.text_input("이름 입력")
 emp_id = st.text_input("사번 입력")
 
@@ -138,39 +189,49 @@ if st.button("✅ 기록 저장", use_container_width=True):
         st.toast("저장 완료 및 Render 반영", icon="✅")
         st.rerun()
 
-# ---------- 전체 명단 ----------
-st.header("📋 전체 명단 (선택 시 수정창 자동 반영)")
+# ---------- 2️⃣ 검색 ----------
+st.header("🔍 검색 / 필터")
+col1, col2 = st.columns(2)
+with col1:
+    keyword = st.text_input("이름/사번 검색")
+with col2:
+    show_expired = st.toggle("⏰ 한달 지난 사람만 보기")
 
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    # 선택 컬럼 추가
-    df["선택"] = False
+    filtered = df.copy()
 
-    # 테이블 표시
-    selected_df = st.data_editor(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        key="table",
-        column_config={
-            "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
-        },
-    )
+    if keyword.strip():
+        filtered = filtered[
+            filtered.apply(
+                lambda x: keyword.lower() in x["이름"].lower() or keyword in x["사번"],
+                axis=1,
+            )
+        ]
+    if show_expired:
+        filtered = filtered[filtered["한달지남"] == "O"]
 
-    # ✅ 체크된 행 자동 반영
-    selected_rows = selected_df[selected_df["선택"] == True]
-    record = None
-    if not selected_rows.empty:
-        record = selected_rows.iloc[0].to_dict()
+    st.write("🔽 검색 결과 (선택 시 수정창 반영)")
+    if len(filtered) > 0:
+        filtered["선택"] = False
+        selected_filtered = st.data_editor(
+            filtered,
+            use_container_width=True,
+            hide_index=True,
+            key="search_table",
+            column_config={
+                "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
+            },
+        )
+        selected_rows = selected_filtered[selected_filtered["선택"] == True]
+        if not selected_rows.empty:
+            st.session_state["selected_record"] = selected_rows.iloc[0].to_dict()
     else:
-        record = None
-else:
-    st.info("등록된 데이터가 없습니다.")
-    record = None
+        st.info("검색 결과 없음")
 
-# ---------- 수정 / 삭제 ----------
+# ---------- 3️⃣ 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
-
+record = st.session_state.get("selected_record")
 if record:
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
     name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
@@ -195,38 +256,28 @@ if record:
             st.rerun()
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
-            st.session_state["records"] = [
-                r for r in st.session_state["records"] if r["사번"] != record["사번"]
-            ]
+            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
             st.rerun()
 else:
-    st.info("수정할 항목을 선택하세요.")
+    st.info("검색 결과 또는 명단에서 항목을 선택하세요.")
 
-
-# ---------- 검색 및 필터 ----------
-st.header("🔍 검색 / 필터")
-col1, col2 = st.columns(2)
-with col1:
-    keyword = st.text_input("이름/사번 검색")
-with col2:
-    show_expired = st.toggle("⏰ 한달 지난 사람만 보기")
-
+# ---------- 4️⃣ 전체 명단 ----------
+st.header("📋 전체 명단")
 if len(df) > 0:
-    filtered = df.copy()
-    if keyword.strip():
-        filtered = filtered[filtered.apply(
-            lambda x: keyword.lower() in x["이름"].lower() or keyword in x["사번"],
-            axis=1)]
-    if show_expired:
-        filtered = filtered[filtered["한달지남"] == "O"]
-    st.dataframe(filtered, use_container_width=True, hide_index=True)
+    last_three = df.tail(3).reset_index(drop=True)
+    st.markdown("**🆕 최근 저장된 3명**")
+    st.dataframe(last_three, use_container_width=True, hide_index=True)
+    with st.expander("전체 명단 보기 ▾"):
+        st.dataframe(df, use_container_width=True, hide_index=True)
+else:
+    st.info("등록된 데이터가 없습니다.")
 
 # ---------- 하단 상태 ----------
 st.markdown(
-    f"<p style='text-align:center;font-size:12px;color:#94a3b8;margin-top:8px;'>"
+    f"<p style='text-align:center;font-size:14px;color:#94a3b8;margin-top:8px;'>"
     f"{'✅' if ok else '⚠️'} {msg}</p>",
     unsafe_allow_html=True
 )
