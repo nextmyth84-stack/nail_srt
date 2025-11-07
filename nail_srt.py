@@ -1,14 +1,11 @@
-# nail_srt.py — 케어 예약 관리 (KST 기준 + 모바일 최적화 + 자동 다크모드 + 선택/수정/삭제 + Render 연동)
+# nail_srt.py — 케어 예약 관리 (한국시간 + 자동 다크모드 + Render연동 + 직관적 수정/삭제)
 
 import streamlit as st
 import pandas as pd
 import json, os, requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from zoneinfo import ZoneInfo  # ✅ 한국 시간(KST) 적용
-from streamlit.runtime.scriptrunner import RerunException
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-import streamlit.runtime.scriptrunner as scriptrunner
+from zoneinfo import ZoneInfo
 
 # =====================================
 # ☁️ Render 서버 설정
@@ -20,11 +17,9 @@ FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
 
 def render_upload(filename, data):
     try:
-        res = requests.post(
-            f"{RENDER_BASE}/upload",
-            json={"filename": filename, "content": data},
-            timeout=10,
-        )
+        res = requests.post(f"{RENDER_BASE}/upload",
+                            json={"filename": filename, "content": data},
+                            timeout=10)
         return res.ok
     except Exception as e:
         st.toast(f"Render 업로드 실패: {e}", icon="⚠️")
@@ -71,74 +66,30 @@ for r in records_cache:
 st.session_state.setdefault("records", records_cache)
 
 # =====================================
-# 한달지남 자동 갱신 (KST 기준)
+# 한달지남 자동 갱신 (한국시간)
 # =====================================
 today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
 for r in st.session_state["records"]:
     try:
-        one_month_date = datetime.strptime(r["한달시점"], "%Y-%m-%d").date()
-        r["한달지남"] = "O" if today_kst >= one_month_date else "X"
+        one_month = datetime.strptime(r["한달시점"], "%Y-%m-%d").date()
+        r["한달지남"] = "O" if today_kst >= one_month else "X"
     except:
         pass
 
 # =====================================
-# 페이지 설정 + 자동 다크모드 + 폰트/여백
+# UI 스타일 (자동 다크모드 + 글자크기 균형)
 # =====================================
 st.set_page_config(page_title="케어관리", layout="centered")
 st.markdown("""
 <style>
-:root {
-  --bg: #ffffff;
-  --text: #111827;
-  --input-bg: #f8fafc;
-  --input-border: #d1d5db;
-  --button-bg: #e5e7eb;
-  --button-text: #111827;
-  --table-bg: #ffffff;
-}
+section.main, .block-container { padding-top: 1.4rem !important; }
+h1 {font-size: 21px !important; text-align:center;}
+h2,h3 {font-size:17px !important;}
+label, div, span {font-size:14px !important;}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1220;
-    --text: #e5e7eb;
-    --input-bg: #111827;
-    --input-border: #334155;
-    --button-bg: #1f2937;
-    --button-text: #f1f5f9;
-    --table-bg: #0f172a;
-  }
-}
-html, body, [data-testid="stAppViewContainer"] {
-  background-color: var(--bg) !important;
-  color: var(--text) !important;
-}
-[data-testid="stHeader"] { background: transparent !important; }
-
-/* ✅ 상단 여백(모바일 밸런스) */
-section.main, .block-container { padding-top: 2.0rem !important; }
-
-/* 폰트 크기 (모바일 최적) */
-h1 {font-size: 28px !important; text-align:center;}
-h2,h3 {font-size:20px !important; text-align:center;}
-label, div, span {font-size:18px !important;}
-
-input, textarea, select {
-  background-color: var(--input-bg) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--input-border) !important;
-  border-radius: 8px !important;
-}
-button, .stButton>button {
-  background: var(--button-bg) !important;
-  color: var(--button-text) !important;
-  border: 1px solid var(--input-border) !important;
-  border-radius: 8px !important;
-  font-size:14px !important;
-  padding:7px 0px !important;
-}
-[data-testid="stDataFrame"] .stDataFrame {
-  background-color: var(--table-bg) !important;
-  color: var(--text) !important;
-  border-color: var(--input-border) !important;
+  html, body { background-color:#0b1220 !important; color:#e5e7eb !important; }
+  input,textarea,select {background:#111827!important;color:#e5e7eb!important;border:1px solid #334155!important;}
+  button,.stButton>button {background:#1f2937!important;color:#e5e7eb!important;border:1px solid #334155!important;}
 }
 </style>
 """, unsafe_allow_html=True)
@@ -161,7 +112,7 @@ if st.button("✅ 기록 저장", use_container_width=True):
     if not name or not emp_id:
         st.warning("이름과 사번을 모두 입력하세요.")
     else:
-        today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()                # ✅ KST
+        today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
         one_month = today_kst + relativedelta(months=1)
         updated = False
         for r in st.session_state["records"]:
@@ -185,81 +136,52 @@ if st.button("✅ 기록 저장", use_container_width=True):
         save_json(FILE_PATH, st.session_state["records"])
         render_upload(FILE_NAME, st.session_state["records"])
         st.toast("저장 완료 및 Render 반영", icon="✅")
-        st.rerun()  # 저장 후 목록 즉시 갱신
+        st.rerun()
 
-# ---------- 전체 명단 (선택 가능) ----------
-st.header("📋 전체 명단 (선택 → 아래 자동 반영)")
+# ---------- 전체 명단 ----------
+st.header("📋 전체 명단")
 df = pd.DataFrame(st.session_state["records"])
-record = None
-
 if len(df) > 0:
-    # 체크박스 컬럼 추가(없으면)
-    if "선택" not in df.columns:
-        df["선택"] = False
-
-    selected_df = st.data_editor(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
-        },
-        key="select_table"
-    )
-    selected_rows = selected_df[selected_df["선택"] == True]
-    if not selected_rows.empty:
-        record = selected_rows.iloc[0].to_dict()
-        st.session_state["selected_record"] = record
-    else:
-        record = st.session_state.get("selected_record", {})
+    st.dataframe(df, use_container_width=True, hide_index=True)
 else:
     st.info("등록된 데이터가 없습니다.")
-    st.session_state["selected_record"] = {}
-
-from streamlit.runtime.scriptrunner import RerunException
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-import streamlit.runtime.scriptrunner as scriptrunner
 
 # ---------- 수정 및 삭제 ----------
-st.header("✏️ 선택된 항목 수정/삭제")
+st.header("✏️ 수정 / 삭제")
+if len(df) > 0:
+    selected_id = st.selectbox("사번 선택", df["사번"].tolist(), key="selected_emp")
+    record = next((r for r in st.session_state["records"] if r["사번"] == selected_id), None)
 
-record = st.session_state.get("selected_record", {})
-if record and record.get("사번"):
-    st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
-    name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
-    care_edit = st.date_input(
-        "케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
-    month_edit = st.date_input(
-        "한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
-    flag_edit = st.selectbox(
-        "한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
+    if record:
+        name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
+        care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
+        month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
+        flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 수정", use_container_width=True):
-            for r in st.session_state["records"]:
-                if r["사번"] == record["사번"]:
-                    r.update({
-                        "이름": name_edit,
-                        "케어일자": care_edit.strftime("%Y-%m-%d"),
-                        "한달시점": month_edit.strftime("%Y-%m-%d"),
-                        "한달지남": flag_edit,
-                    })
-            save_json(FILE_PATH, st.session_state["records"])
-            render_upload(FILE_NAME, st.session_state["records"])
-            st.toast("수정 완료", icon="✅")
-            st.rerun()   # 🔁 전체 명단 즉시 갱신
-
-    with col2:
-        if st.button("🗑️ 삭제", use_container_width=True):
-            st.session_state["records"] = [
-                r for r in st.session_state["records"] if r["사번"] != record["사번"]
-            ]
-            save_json(FILE_PATH, st.session_state["records"])
-            render_upload(FILE_NAME, st.session_state["records"])
-            st.toast("삭제 완료", icon="🗑️")
-            st.rerun()   # 🔁 전체 명단 즉시 갱신
-
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 수정", use_container_width=True):
+                for r in st.session_state["records"]:
+                    if r["사번"] == selected_id:
+                        r.update({
+                            "이름": name_edit,
+                            "케어일자": care_edit.strftime("%Y-%m-%d"),
+                            "한달시점": month_edit.strftime("%Y-%m-%d"),
+                            "한달지남": flag_edit,
+                        })
+                save_json(FILE_PATH, st.session_state["records"])
+                render_upload(FILE_NAME, st.session_state["records"])
+                st.toast("수정 완료", icon="✅")
+                st.rerun()
+        with col2:
+            if st.button("🗑️ 삭제", use_container_width=True):
+                st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != selected_id]
+                save_json(FILE_PATH, st.session_state["records"])
+                render_upload(FILE_NAME, st.session_state["records"])
+                st.toast("삭제 완료", icon="🗑️")
+                st.rerun()
+else:
+    st.info("등록된 데이터가 없습니다.")
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
@@ -271,14 +193,10 @@ with col2:
 
 if len(df) > 0:
     filtered = df.copy()
-    if "선택" in filtered.columns:
-        filtered = filtered.drop(columns=["선택"])  # 보기용 컬럼 제거
-
     if keyword.strip():
         filtered = filtered[filtered.apply(
             lambda x: keyword.lower() in x["이름"].lower() or keyword in x["사번"],
-            axis=1
-        )]
+            axis=1)]
     if show_expired:
         filtered = filtered[filtered["한달지남"] == "O"]
     st.dataframe(filtered, use_container_width=True, hide_index=True)
