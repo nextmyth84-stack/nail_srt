@@ -248,12 +248,28 @@ else:
 # ---------- 3️⃣ 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
 record = st.session_state.get("selected_record")
+
 if record:
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
-    name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
-    care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
-    month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
-    flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
+
+    # ✅ key를 사번 기반으로 동적으로 지정 (캐싱 문제 해결)
+    name_edit = st.text_input("이름 수정", record["이름"], key=f"edit_name_{record['사번']}")
+    care_edit = st.date_input(
+        "케어일자 수정",
+        datetime.strptime(record["케어일자"], "%Y-%m-%d").date(),
+        key=f"edit_care_{record['사번']}"
+    )
+    month_edit = st.date_input(
+        "한달시점 수정",
+        datetime.strptime(record["한달시점"], "%Y-%m-%d").date(),
+        key=f"edit_month_{record['사번']}"
+    )
+    flag_edit = st.selectbox(
+        "한달지남",
+        ["O", "X"],
+        index=0 if record["한달지남"] == "O" else 1,
+        key=f"edit_flag_{record['사번']}"
+    )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -272,13 +288,16 @@ if record:
             st.rerun()
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
-            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
+            st.session_state["records"] = [
+                r for r in st.session_state["records"] if r["사번"] != record["사번"]
+            ]
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
             st.rerun()
 else:
     st.info("검색 결과 또는 명단에서 항목을 선택하세요.")
+
 
 # ---------- 4️⃣ 전체 명단 ----------
 st.header("📋 전체 명단")
