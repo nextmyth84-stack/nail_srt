@@ -171,35 +171,54 @@ if st.button("✅ 기록 저장", use_container_width=True):
 
 # ---------- 전체 명단 ----------
 st.header("📋 전체 명단 (선택 가능)")
+
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    df["선택"] = False
-    selected_df = st.data_editor(
+    # 체크박스 컬럼 추가
+    if "선택" not in df.columns:
+        df["선택"] = False
+
+    # 기존 선택 유지
+    prev_selected = st.session_state.get("selected_record", {}).get("사번")
+
+    # 표 표시
+    edited_df = st.data_editor(
         df,
         use_container_width=True,
         hide_index=True,
+        key="select_table",
         column_config={
             "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
         },
-        key="select_table"
     )
 
-    selected_rows = selected_df[selected_df["선택"] == True]
-    record = None
+    # ✅ 선택 행 업데이트 감지
+    selected_rows = edited_df[edited_df["선택"] == True]
     if not selected_rows.empty:
-        record = selected_rows.iloc[0].to_dict()
+        new_selected = selected_rows.iloc[0].to_dict()
+        if new_selected.get("사번") != prev_selected:
+            st.session_state["selected_record"] = new_selected
+    elif prev_selected:
+        # 체크 해제 시 선택값 초기화
+        st.session_state["selected_record"] = {}
+
 else:
     st.info("등록된 데이터가 없습니다.")
-    record = None
+    st.session_state["selected_record"] = {}
 
 # ---------- 수정 및 삭제 ----------
 st.header("✏️ 선택된 항목 수정/삭제")
-if record:
+
+record = st.session_state.get("selected_record", {})
+if record and record.get("사번"):
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
     name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
-    care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
-    month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
-    flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
+    care_edit = st.date_input(
+        "케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
+    month_edit = st.date_input(
+        "한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
+    flag_edit = st.selectbox(
+        "한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -217,10 +236,15 @@ if record:
             st.toast("수정 완료", icon="✅")
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
-            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
+            st.session_state["records"] = [
+                r for r in st.session_state["records"] if r["사번"] != record["사번"]
+            ]
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
+
+else:
+    st.info("표에서 수정할 항목을 선택하세요.")
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
