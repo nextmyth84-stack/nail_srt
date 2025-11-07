@@ -6,6 +6,9 @@ import json, os, requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from zoneinfo import ZoneInfo  # ✅ 한국 시간(KST) 적용
+from streamlit.runtime.scriptrunner import RerunException
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+import streamlit.runtime.scriptrunner as scriptrunner
 
 # =====================================
 # ☁️ Render 서버 설정
@@ -213,24 +216,23 @@ else:
     st.info("등록된 데이터가 없습니다.")
     st.session_state["selected_record"] = {}
 
+from streamlit.runtime.scriptrunner import RerunException
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+import streamlit.runtime.scriptrunner as scriptrunner
+
 # ---------- 수정 및 삭제 ----------
 st.header("✏️ 선택된 항목 수정/삭제")
+
+record = st.session_state.get("selected_record", {})
 if record and record.get("사번"):
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
-
-    # 기존 문자열 날짜 → date 객체 (안전 변환)
-    def to_date_safe(s):
-        try:
-            return datetime.strptime(s, "%Y-%m-%d").date()
-        except:
-            return datetime.now(ZoneInfo("Asia/Seoul")).date()
-
-    name_edit  = st.text_input("이름 수정", record.get("이름",""), key="edit_name")
-    care_edit  = st.date_input("케어일자 수정",  to_date_safe(record.get("케어일자","")),  key="edit_care")
-    month_edit = st.date_input("한달시점 수정",  to_date_safe(record.get("한달시점","")), key="edit_month")
-    flag_edit  = st.selectbox("한달지남", ["O", "X"],
-                              index=0 if record.get("한달지남","X") == "O" else 1,
-                              key="edit_flag")
+    name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
+    care_edit = st.date_input(
+        "케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
+    month_edit = st.date_input(
+        "한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
+    flag_edit = st.selectbox(
+        "한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -246,7 +248,8 @@ if record and record.get("사번"):
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("수정 완료", icon="✅")
-            st.rerun()  # ✅ 즉시 목록/폼 갱신
+            st.rerun()   # 🔁 전체 명단 즉시 갱신
+
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
             st.session_state["records"] = [
@@ -255,9 +258,8 @@ if record and record.get("사번"):
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
-            st.rerun()  # ✅ 즉시 목록 갱신
-else:
-    st.info("표에서 수정할 항목을 선택하세요.")
+            st.rerun()   # 🔁 전체 명단 즉시 갱신
+
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
