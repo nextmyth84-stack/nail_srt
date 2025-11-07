@@ -190,3 +190,6 @@ st.markdown(
     f"{'✅' if ok else '⚠️'} {msg}</p>",
     unsafe_allow_html=True
 )
+
+st.button("🔼 Render 업로드 테스트", on_click=lambda: render_upload("케어관리.json"))
+
