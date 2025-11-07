@@ -103,7 +103,7 @@ html, body, [data-testid="stAppViewContainer"] {
   background-color: var(--bg) !important;
   color: var(--text) !important;
 }
-h1 {font-size: 25px !important; text-align:center;}
+h1 {font-size: 28px !important; text-align:center;}
 h2,h3 {font-size:20px !important; text-align:center;}
 label, div, span {font-size:17px !important;}
 input, textarea, select {
