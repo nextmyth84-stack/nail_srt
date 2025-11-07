@@ -3,6 +3,9 @@ import pandas as pd
 import json, os, requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from streamlit.runtime.scriptrunner import RerunException
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+import streamlit.runtime.scriptrunner as scriptrunner
 
 # =====================================
 # ☁️ Render 서버 설정
@@ -239,6 +242,8 @@ if record and record.get("사번"):
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("수정 완료", icon="✅")
+            st.experimental_rerun()   # 🔁 전체 명단 즉시 갱신
+
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
             st.session_state["records"] = [
@@ -247,7 +252,7 @@ if record and record.get("사번"):
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("삭제 완료", icon="🗑️")
-
+            st.experimental_rerun()   # 🔁 전체 명단 즉시 갱신
 else:
     st.info("표에서 수정할 항목을 선택하세요.")
 
