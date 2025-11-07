@@ -80,10 +80,9 @@ for r in st.session_state["records"]:
 # =====================================
 st.set_page_config(page_title="케어관리", layout="centered")
 
-# ==== 자동 다크모드 감지 ====
+# ==== 자동 다크모드 감지 + 폰트 조정 ====
 st.markdown("""
 <style>
-/* 💡 라이트모드 기본 */
 :root {
   --bg: #ffffff;
   --text: #111827;
@@ -93,8 +92,6 @@ st.markdown("""
   --button-text: #111827;
   --table-bg: #ffffff;
 }
-
-/* 🌙 다크모드 자동 감지 */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b1220;
@@ -106,13 +103,16 @@ st.markdown("""
     --table-bg: #0f172a;
   }
 }
-
-/* 공통 UI */
 html, body, [data-testid="stAppViewContainer"] {
   background-color: var(--bg) !important;
   color: var(--text) !important;
 }
 [data-testid="stHeader"] { background: transparent !important; }
+
+/* 폰트 크기 조정 */
+h1 {font-size: 22px !important; text-align:center;}
+h2,h3,h4 {font-size:18px !important; text-align:center;}
+label, p, div, span {font-size:15px !important;}
 
 input, textarea, select {
   background-color: var(--input-bg) !important;
@@ -120,34 +120,24 @@ input, textarea, select {
   border: 1px solid var(--input-border) !important;
   border-radius: 8px !important;
 }
-
 button[kind="primary"], .stButton>button {
   background: var(--button-bg) !important;
   color: var(--button-text) !important;
   border: 1px solid var(--input-border) !important;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
+  font-size:15px !important;
+  padding:8px 0px !important;
 }
-
 [data-testid="stDataFrame"] .stDataFrame {
   background-color: var(--table-bg) !important;
   color: var(--text) !important;
   border-color: var(--input-border) !important;
 }
-
-label, .stMarkdown, .stTextInput, .stSelectbox, .stDateInput, .stButton {
-  color: var(--text) !important;
-}
-hr, .stDivider { border-color: var(--input-border) !important; }
-
-/* 모바일 UI 크기 조정 */
-.stTextInput, .stSelectbox, .stDateInput, .stButton { margin-bottom: 12px !important; }
-button, input, select, textarea { font-size: 17px !important; }
 </style>
 """, unsafe_allow_html=True)
-# ==== /자동 다크모드 ====
 
 # =====================================
-# 본문 UI
+# 본문
 # =====================================
 st.title("💆‍♀️ 케어 예약 관리")
 
@@ -193,39 +183,46 @@ if st.button("✅ 기록 저장", use_container_width=True):
 st.header("📋 전체 명단")
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    edited = st.data_editor(df, use_container_width=True, hide_index=True, key="main_table", disabled=True)
+    # 행 클릭 시 자동 반영
+    if "selected_row" not in st.session_state:
+        st.session_state["selected_row"] = None
+    if "edited_rows" in st.session_state["main_table"] and st.session_state["main_table"]["edited_rows"]:
+        idx = list(st.session_state["main_table"]["edited_rows"].keys())[0]
+        st.session_state["selected_row"] = edited.iloc[idx].to_dict()
 else:
     st.info("등록된 데이터가 없습니다.")
 
 # ---------- 수정 및 삭제 ----------
-st.header("✏️ 수정 또는 삭제")
-if len(df) > 0:
-    selected = st.selectbox("사번 선택", df["사번"].tolist())
-    record = next((r for r in st.session_state["records"] if r["사번"] == selected), None)
-    if record:
-        name_edit = st.text_input("이름 수정", record["이름"])
-        care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date())
-        month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date())
-        flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1)
+st.header("✏️ 선택된 항목 수정/삭제")
+record = st.session_state.get("selected_row")
+if record:
+    st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
+    name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
+    care_edit = st.date_input("케어일자 수정", datetime.strptime(record["케어일자"], "%Y-%m-%d").date(), key="edit_care")
+    month_edit = st.date_input("한달시점 수정", datetime.strptime(record["한달시점"], "%Y-%m-%d").date(), key="edit_month")
+    flag_edit = st.selectbox("한달지남", ["O", "X"], index=0 if record["한달지남"] == "O" else 1, key="edit_flag")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("💾 수정", use_container_width=True):
-                record.update({
-                    "이름": name_edit,
-                    "케어일자": care_edit.strftime("%Y-%m-%d"),
-                    "한달시점": month_edit.strftime("%Y-%m-%d"),
-                    "한달지남": flag_edit,
-                })
-                save_json(FILE_PATH, st.session_state["records"])
-                render_upload(FILE_NAME, st.session_state["records"])
-                st.toast("수정 완료", icon="✅")
-        with col2:
-            if st.button("🗑️ 삭제", use_container_width=True):
-                st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != selected]
-                save_json(FILE_PATH, st.session_state["records"])
-                render_upload(FILE_NAME, st.session_state["records"])
-                st.toast("삭제 완료", icon="🗑️")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 수정", use_container_width=True):
+            for r in st.session_state["records"]:
+                if r["사번"] == record["사번"]:
+                    r.update({
+                        "이름": name_edit,
+                        "케어일자": care_edit.strftime("%Y-%m-%d"),
+                        "한달시점": month_edit.strftime("%Y-%m-%d"),
+                        "한달지남": flag_edit,
+                    })
+            save_json(FILE_PATH, st.session_state["records"])
+            render_upload(FILE_NAME, st.session_state["records"])
+            st.toast("수정 완료", icon="✅")
+    with col2:
+        if st.button("🗑️ 삭제", use_container_width=True):
+            st.session_state["records"] = [r for r in st.session_state["records"] if r["사번"] != record["사번"]]
+            save_json(FILE_PATH, st.session_state["records"])
+            render_upload(FILE_NAME, st.session_state["records"])
+            st.toast("삭제 완료", icon="🗑️")
 
 # ---------- 검색 및 필터 ----------
 st.header("🔍 검색 / 필터")
@@ -245,7 +242,7 @@ if len(df) > 0:
 
 # ---------- 하단 상태 ----------
 st.markdown(
-    f"<p style='text-align:center;font-size:13px;color:#94a3b8;margin-top:12px;'>"
+    f"<p style='text-align:center;font-size:12px;color:#94a3b8;margin-top:8px;'>"
     f"{'✅' if ok else '⚠️'} {msg}</p>",
     unsafe_allow_html=True
 )
