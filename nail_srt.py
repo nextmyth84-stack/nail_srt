@@ -81,7 +81,7 @@ st.markdown("""
 <style>
 /* 상단 여백 제거 */
 section.main, .block-container {
-  padding-top: 0.4rem !important;  /* 기본 6rem → 0.4rem */
+  padding-top: 1.4rem !important;  /* 기본 6rem → 0.4rem */
 }
 
 :root {
