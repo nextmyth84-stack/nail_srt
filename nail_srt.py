@@ -1,5 +1,5 @@
 # =====================================
-# 💆‍♀️ 케어 예약 관리 v2.3 (단일 선택)
+# 💆‍♀️ 케어 예약 관리 v2.5 (단일 선택, 부드러운 갱신)
 # =====================================
 import streamlit as st
 import pandas as pd
@@ -36,8 +36,8 @@ def render_download(filename, save_as=None):
             with open(local_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return True
-    except Exception as e:
-        st.toast(f"Render 복원 실패: {e}", icon="⚠️")
+    except Exception:
+        pass
     return False
 
 def load_json(path, default):
@@ -176,15 +176,11 @@ if keyword.strip():
                                            column_config={"선택": st.column_config.CheckboxColumn("선택")})
         sel = selected_filtered[selected_filtered["선택"] == True]
         if not sel.empty:
-            idx = sel.index[0]
+            idx = sel.index[-1]
             for i in selected_filtered.index:
                 selected_filtered.at[i, "선택"] = (i == idx)
             chosen = selected_filtered.loc[idx].to_dict()
             st.session_state["selected_record"] = chosen
-            st.toast(f"✅ {chosen['이름']} 선택됨", icon="💡")
-            st.rerun()
-    else:
-        st.info("검색 결과 없음")
 
 # ---------- 3️⃣ 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
@@ -241,13 +237,11 @@ if len(df) > 0:
                                      column_config={"선택": st.column_config.CheckboxColumn("선택")})
     sel_recent = selected_recent[selected_recent["선택"] == True]
     if not sel_recent.empty:
-        idx = sel_recent.index[0]
+        idx = sel_recent.index[-1]
         for i in selected_recent.index:
             selected_recent.at[i, "선택"] = (i == idx)
         chosen = selected_recent.loc[idx].to_dict()
         st.session_state["selected_record"] = chosen
-        st.toast(f"✅ {chosen['이름']} 선택됨", icon="💡")
-        st.rerun()
 
     with st.expander("전체 명단 보기 ▾"):
         df["선택"] = False
@@ -256,12 +250,10 @@ if len(df) > 0:
                                       column_config={"선택": st.column_config.CheckboxColumn("선택")})
         sel_all = selected_all[selected_all["선택"] == True]
         if not sel_all.empty:
-            idx = sel_all.index[0]
+            idx = sel_all.index[-1]
             for i in selected_all.index:
                 selected_all.at[i, "선택"] = (i == idx)
             chosen = selected_all.loc[idx].to_dict()
             st.session_state["selected_record"] = chosen
-            st.toast(f"✅ {chosen['이름']} 선택됨", icon="💡")
-            st.rerun()
 else:
     st.info("등록된 데이터가 없습니다.")
