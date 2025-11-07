@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 # =====================================
 # 🌐 Render 서버 URL
 # =====================================
-RENDER_BASE = "https://roadvision-json-server.onrender.com"  # ← 네 서버 주소로 교체
+RENDER_BASE = "https://roadvision-json-server.onrender.com"  # ← 네 Render 주소로 교체
 DATA_DIR = "data"
 FILE_NAME = "케어관리.json"
 FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
@@ -85,26 +85,32 @@ st.set_page_config(page_title="케어 예약 관리", layout="centered")
 st.title("💆‍♀️ 케어 예약 관리")
 
 st.subheader("🧾 케어 기록 추가")
-name = st.text_input("이름 입력:")
 
-# ✅ 기존 기록 요약 표시
-if name.strip():
-    existing = next((r for r in st.session_state["records"] if r["이름"] == name.strip()), None)
+col1, col2 = st.columns(2)
+with col1:
+    name = st.text_input("이름 입력:")
+with col2:
+    emp_id = st.text_input("사번 입력:")
+
+# ✅ 기존 기록 요약 표시 (사번 기준)
+if emp_id.strip():
+    existing = next((r for r in st.session_state["records"] if r["사번"] == emp_id.strip()), None)
     if existing:
         st.markdown(
             f"<p style='font-size:13px; color:#64748b;'>"
-            f"📌 마지막 케어일: <b>{existing['케어일자']}</b> / "
+            f"📌 {existing['이름']}님의 마지막 케어일: <b>{existing['케어일자']}</b> / "
             f"한달시점: <b>{existing['한달시점']}</b></p>",
             unsafe_allow_html=True,
         )
 
-if st.button("기록 추가") and name.strip():
+if st.button("기록 추가") and name.strip() and emp_id.strip():
     today = datetime.now().date()
     one_month = today + relativedelta(months=1)
     updated = False
 
     for r in st.session_state["records"]:
-        if r["이름"] == name.strip():
+        if r["사번"] == emp_id.strip():
+            r["이름"] = name.strip()
             r["케어일자"] = today.strftime("%Y-%m-%d")
             r["한달시점"] = one_month.strftime("%Y-%m-%d")
             r["한달지남"] = "O" if today >= one_month else "X"
@@ -114,13 +120,14 @@ if st.button("기록 추가") and name.strip():
     if not updated:
         st.session_state["records"].append({
             "이름": name.strip(),
+            "사번": emp_id.strip(),
             "케어일자": today.strftime("%Y-%m-%d"),
             "한달시점": one_month.strftime("%Y-%m-%d"),
             "한달지남": "O" if today >= one_month else "X",
         })
-        st.success(f"✅ {name} 님의 새 케어 기록이 추가되었습니다.")
+        st.success(f"✅ {name} ({emp_id}) 님의 새 케어 기록이 추가되었습니다.")
     else:
-        st.warning(f"♻️ {name} 님의 케어 기록이 갱신되었습니다.")
+        st.warning(f"♻️ {name} ({emp_id}) 님의 케어 기록이 갱신되었습니다.")
 
     # ✅ 저장 및 업로드
     save_json(FILE_PATH, st.session_state["records"])
@@ -138,14 +145,14 @@ if st.session_state["records"]:
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("🔍 이름 검색")
-        search_name = st.text_input("검색할 이름 입력:")
+        st.subheader("🔍 검색")
+        keyword = st.text_input("이름 또는 사번으로 검색:")
     with col2:
         st.write("")
         show_expired = st.button("⏰ 한달 지난 사람만 보기")
 
-    if search_name.strip():
-        filtered = df[df["이름"].str.contains(search_name.strip(), case=False)]
+    if keyword.strip():
+        filtered = df[df.apply(lambda x: keyword.strip().lower() in x["이름"].lower() or keyword.strip() in x["사번"], axis=1)]
         if not filtered.empty:
             st.dataframe(filtered, use_container_width=True)
         else:
@@ -156,9 +163,8 @@ if st.session_state["records"]:
             st.dataframe(filtered, use_container_width=True)
         else:
             st.info("한달이 지난 사람이 없습니다.")
-
 else:
-    st.info("아직 기록이 없습니다. 이름을 입력하고 [기록 추가] 버튼을 눌러보세요.")
+    st.info("아직 기록이 없습니다. 이름과 사번을 입력하고 [기록 추가] 버튼을 눌러보세요.")
 
 # =====================================
 # 📥 다운로드 & 상태표시 (하단)
