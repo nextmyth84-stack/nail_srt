@@ -79,6 +79,11 @@ for r in st.session_state["records"]:
 st.set_page_config(page_title="케어관리", layout="centered")
 st.markdown("""
 <style>
+/* 상단 여백 제거 */
+section.main, .block-container {
+  padding-top: 0.4rem !important;  /* 기본 6rem → 0.4rem */
+}
+
 :root {
   --bg: #ffffff;
   --text: #111827;
