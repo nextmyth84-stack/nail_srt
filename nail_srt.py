@@ -282,14 +282,62 @@ else:
 
 # ---------- 4️⃣ 전체 명단 ----------
 st.header("📋 전체 명단")
+
+df = pd.DataFrame(st.session_state["records"])
+
 if len(df) > 0:
-    last_three = df.tail(3).reset_index(drop=True)
-    st.markdown("**🆕 최근 저장된 3명**")
-    st.dataframe(last_three, use_container_width=True, hide_index=True)
+    # ✅ 가장 최근 케어일자 계산 (한국시간)
+    try:
+        latest_date = max(
+            datetime.strptime(r["케어일자"], "%Y-%m-%d") for r in st.session_state["records"]
+        )
+        latest_str = latest_date.strftime("%Y-%m-%d")
+    except:
+        latest_str = "기록 없음"
+
+    st.markdown(
+        f"<p style='font-size:17px; color:#64748b; text-align:center;'>"
+        f"📅 마지막 저장일: <b>{latest_str} (KST)</b></p>",
+        unsafe_allow_html=True
+    )
+
+    # ✅ 최근 3명 (선택 가능)
+    st.markdown("**🆕 최근 저장된 3명 (선택 가능)**")
+    recent_df = df.tail(3).reset_index(drop=True)
+    recent_df["선택"] = False
+    selected_recent = st.data_editor(
+        recent_df,
+        use_container_width=True,
+        hide_index=True,
+        key="recent_table",
+        column_config={
+            "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
+        },
+    )
+
+    selected_rows_recent = selected_recent[selected_recent["선택"] == True]
+    if not selected_rows_recent.empty:
+        st.session_state["selected_record"] = selected_rows_recent.iloc[0].to_dict()
+
+    # ✅ 전체 명단 (expander 내부)
     with st.expander("전체 명단 보기 ▾"):
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        df["선택"] = False
+        selected_all = st.data_editor(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            key="all_table",
+            column_config={
+                "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
+            },
+        )
+        selected_rows_all = selected_all[selected_all["선택"] == True]
+        if not selected_rows_all.empty:
+            st.session_state["selected_record"] = selected_rows_all.iloc[0].to_dict()
+
 else:
     st.info("등록된 데이터가 없습니다.")
+
 
 # ---------- 하단 상태 ----------
 st.markdown(
