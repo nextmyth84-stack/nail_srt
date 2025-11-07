@@ -153,16 +153,16 @@ if st.button("✅ 기록 저장", use_container_width=True):
     if not name or not emp_id:
         st.warning("이름과 사번을 모두 입력하세요.")
     else:
-        today = datetime.now().date()
-        one_month = today + relativedelta(months=1)
+         = datetime.now(ZoneInfo("Asia/Seoul")).date()
+        one_month =  + relativedelta(months=1)
         updated = False
         for r in st.session_state["records"]:
             if r["사번"] == emp_id.strip():
                 r.update({
                     "이름": name.strip(),
-                    "케어일자": today.strftime("%Y-%m-%d"),
+                    "케어일자": .strftime("%Y-%m-%d"),
                     "한달시점": one_month.strftime("%Y-%m-%d"),
-                    "한달지남": "O" if today >= one_month else "X",
+                    "한달지남": "O" if  >= one_month else "X",
                 })
                 updated = True
                 break
@@ -170,9 +170,9 @@ if st.button("✅ 기록 저장", use_container_width=True):
             st.session_state["records"].append({
                 "이름": name.strip(),
                 "사번": emp_id.strip(),
-                "케어일자": today.strftime("%Y-%m-%d"),
+                "케어일자": .strftime("%Y-%m-%d"),
                 "한달시점": one_month.strftime("%Y-%m-%d"),
-                "한달지남": "O" if today >= one_month else "X",
+                "한달지남": "O" if  >= one_month else "X",
             })
         save_json(FILE_PATH, st.session_state["records"])
         render_upload(FILE_NAME, st.session_state["records"])
