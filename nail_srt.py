@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 # =====================================
 # ☁️ Render 서버 설정
 # =====================================
-RENDER_BASE = "https://roadvision-json-server.onrender.com/"
+RENDER_BASE = "https://roadvision-json-server.onrend"
 DATA_DIR = "data"
 FILE_NAME = "케어관리.json"
 FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
