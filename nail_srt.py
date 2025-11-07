@@ -242,7 +242,7 @@ if record and record.get("사번"):
             save_json(FILE_PATH, st.session_state["records"])
             render_upload(FILE_NAME, st.session_state["records"])
             st.toast("수정 완료", icon="✅")
-            st.experimental_rerun()   # 🔁 전체 명단 즉시 갱신
+            st.rerun()   # 🔁 전체 명단 즉시 갱신
 
     with col2:
         if st.button("🗑️ 삭제", use_container_width=True):
