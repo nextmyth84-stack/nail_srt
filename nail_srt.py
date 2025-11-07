@@ -98,7 +98,9 @@ input, textarea, select {
   border: 1px solid #cbd5e1 !important;
 }
 
-button, .stButton>button {
+/* ✅ 사용자 버튼만 (헤더 버튼 제외) */
+div[data-testid="stVerticalBlock"] button,
+.stButton>button {
   font-size: 18px !important;
   font-weight: 600 !important;
   padding: 12px 0px !important;
@@ -108,10 +110,12 @@ button, .stButton>button {
   border: none !important;
   transition: all 0.15s ease-in-out;
 }
-button:hover, .stButton>button:hover {
+div[data-testid="stVerticalBlock"] button:hover,
+.stButton>button:hover {
   background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
   transform: scale(1.02);
 }
+
 
 [data-testid="stDataFrame"] .stDataFrame {
   font-size: 18px !important;
@@ -128,19 +132,24 @@ button:hover, .stButton>button:hover {
     color: #e5e7eb !important;
     border: 1px solid #334155 !important;
   }
-  button, .stButton>button {
-    background: linear-gradient(180deg, #1e3a8a, #1e40af) !important;
-    color: #e0e7ff !important;
-    border: none !important;
-  }
-  button:hover, .stButton>button:hover {
-    background: linear-gradient(180deg, #1e40af, #1e3a8a) !important;
-    transform: scale(1.02);
-  }
-  [data-testid="stDataFrame"] .stDataFrame {
-    background-color: #0f172a !important;
-    color: #e5e7eb !important;
-  }
+  /* ✅ 사용자 버튼만 (헤더 버튼 제외) */
+div[data-testid="stVerticalBlock"] button,
+.stButton>button {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  padding: 12px 0px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  border: none !important;
+  transition: all 0.15s ease-in-out;
+}
+div[data-testid="stVerticalBlock"] button:hover,
+.stButton>button:hover {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+  transform: scale(1.02);
+}
+
 }
 </style>
 """, unsafe_allow_html=True)
