@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json, os, requests
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from dateutil.relativedelta import relativedelta
 from streamlit.runtime.scriptrunner import RerunException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -68,7 +69,7 @@ st.session_state.setdefault("records", records_cache)
 # =====================================
 # 한달지남 자동 갱신
 # =====================================
-today = datetime.now().date()
+today = datetime.now(ZoneInfo("Asia/Seoul")).date()
 for r in st.session_state["records"]:
     try:
         one_month_date = datetime.strptime(r["한달시점"], "%Y-%m-%d").date()
