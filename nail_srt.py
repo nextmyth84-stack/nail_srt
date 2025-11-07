@@ -200,6 +200,7 @@ if st.button("✅ 기록 저장", use_container_width=True):
 
 # ---------- 2️⃣ 검색 ----------
 st.header("🔍 검색 / 필터")
+
 col1, col2 = st.columns(2)
 with col1:
     keyword = st.text_input("이름/사번 검색")
@@ -207,7 +208,9 @@ with col2:
     show_expired = st.toggle("⏰ 한달 지난 사람만 보기")
 
 df = pd.DataFrame(st.session_state["records"])
-if len(df) > 0:
+
+# ✅ 검색어가 있을 때만 결과 표시
+if keyword.strip() or show_expired:
     filtered = df.copy()
 
     if keyword.strip():
@@ -220,8 +223,8 @@ if len(df) > 0:
     if show_expired:
         filtered = filtered[filtered["한달지남"] == "O"]
 
-    st.write("🔽 검색 결과 (선택 시 수정창 반영)")
     if len(filtered) > 0:
+        st.write("🔽 검색 결과 (선택 시 수정창 반영)")
         filtered["선택"] = False
         selected_filtered = st.data_editor(
             filtered,
@@ -232,11 +235,15 @@ if len(df) > 0:
                 "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
             },
         )
+
         selected_rows = selected_filtered[selected_filtered["선택"] == True]
         if not selected_rows.empty:
             st.session_state["selected_record"] = selected_rows.iloc[0].to_dict()
     else:
         st.info("검색 결과 없음")
+else:
+    st.caption("이름이나 사번을 입력하거나 '한달 지난 사람만 보기'를 선택하면 결과가 표시됩니다.")
+
 
 # ---------- 3️⃣ 수정 / 삭제 ----------
 st.header("✏️ 수정 / 삭제")
