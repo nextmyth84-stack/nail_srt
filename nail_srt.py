@@ -3,6 +3,9 @@ import pandas as pd
 import json, os, requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import os
+os.remove("data/케어관리.json")
+
 
 # =====================================
 # 🌐 Render 서버 URL
