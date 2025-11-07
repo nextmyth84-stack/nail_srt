@@ -82,10 +82,10 @@ for r in st.session_state["records"]:
 st.set_page_config(page_title="케어관리", layout="centered")
 st.markdown("""
 <style>
-section.main, .block-container { padding-top: 1.4rem !important; }
-h1 {font-size: 21px !important; text-align:center;}
-h2,h3 {font-size:17px !important;}
-label, div, span {font-size:14px !important;}
+section.main, .block-container { padding-top: 2.0rem !important; }
+h1 {font-size: 28px !important; text-align:center;}
+h2,h3 {font-size:20px !important;}
+label, div, span {font-size:18px !important;}
 @media (prefers-color-scheme: dark) {
   html, body { background-color:#0b1220 !important; color:#e5e7eb !important; }
   input,textarea,select {background:#111827!important;color:#e5e7eb!important;border:1px solid #334155!important;}
