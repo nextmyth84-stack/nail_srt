@@ -14,11 +14,9 @@ FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
 
 def render_upload(filename, data):
     try:
-        res = requests.post(
-            f"{RENDER_BASE}/upload",
-            json={"filename": filename, "content": data},
-            timeout=10,
-        )
+        res = requests.post(f"{RENDER_BASE}/upload",
+                            json={"filename": filename, "content": data},
+                            timeout=10)
         return res.ok
     except Exception as e:
         st.toast(f"Render 업로드 실패: {e}", icon="⚠️")
@@ -76,11 +74,9 @@ for r in st.session_state["records"]:
         pass
 
 # =====================================
-# 페이지 설정
+# 페이지 설정 + 자동 다크모드
 # =====================================
 st.set_page_config(page_title="케어관리", layout="centered")
-
-# ==== 자동 다크모드 감지 + 폰트 조정 ====
 st.markdown("""
 <style>
 :root {
@@ -107,31 +103,25 @@ html, body, [data-testid="stAppViewContainer"] {
   background-color: var(--bg) !important;
   color: var(--text) !important;
 }
-[data-testid="stHeader"] { background: transparent !important; }
-
-/* 폰트 크기 조정 */
-h1 {font-size: 22px !important; text-align:center;}
-h2,h3,h4 {font-size:18px !important; text-align:center;}
-label, p, div, span {font-size:15px !important;}
-
+h1 {font-size: 25px !important; text-align:center;}
+h2,h3 {font-size:20px !important; text-align:center;}
+label, div, span {font-size:17px !important;}
 input, textarea, select {
   background-color: var(--input-bg) !important;
   color: var(--text) !important;
   border: 1px solid var(--input-border) !important;
   border-radius: 8px !important;
 }
-button[kind="primary"], .stButton>button {
+button, .stButton>button {
   background: var(--button-bg) !important;
   color: var(--button-text) !important;
   border: 1px solid var(--input-border) !important;
   border-radius: 8px !important;
   font-size:15px !important;
-  padding:8px 0px !important;
 }
 [data-testid="stDataFrame"] .stDataFrame {
   background-color: var(--table-bg) !important;
   color: var(--text) !important;
-  border-color: var(--input-border) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -180,22 +170,30 @@ if st.button("✅ 기록 저장", use_container_width=True):
         st.toast("저장 완료 및 Render 반영", icon="✅")
 
 # ---------- 전체 명단 ----------
-st.header("📋 전체 명단")
+st.header("📋 전체 명단 (선택 가능)")
 df = pd.DataFrame(st.session_state["records"])
 if len(df) > 0:
-    edited = st.data_editor(df, use_container_width=True, hide_index=True, key="main_table", disabled=True)
-    # 행 클릭 시 자동 반영
-    if "selected_row" not in st.session_state:
-        st.session_state["selected_row"] = None
-    if "edited_rows" in st.session_state["main_table"] and st.session_state["main_table"]["edited_rows"]:
-        idx = list(st.session_state["main_table"]["edited_rows"].keys())[0]
-        st.session_state["selected_row"] = edited.iloc[idx].to_dict()
+    df["선택"] = False
+    selected_df = st.data_editor(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "선택": st.column_config.CheckboxColumn("선택", help="수정할 항목 선택")
+        },
+        key="select_table"
+    )
+
+    selected_rows = selected_df[selected_df["선택"] == True]
+    record = None
+    if not selected_rows.empty:
+        record = selected_rows.iloc[0].to_dict()
 else:
     st.info("등록된 데이터가 없습니다.")
+    record = None
 
 # ---------- 수정 및 삭제 ----------
 st.header("✏️ 선택된 항목 수정/삭제")
-record = st.session_state.get("selected_row")
 if record:
     st.markdown(f"**🆔 사번:** {record['사번']} / 이름: {record['이름']}")
     name_edit = st.text_input("이름 수정", record["이름"], key="edit_name")
